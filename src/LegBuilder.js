@@ -3,6 +3,32 @@ import styled from 'styled-components'
 import qs from 'qs';
 import OptionsChain from './OptionsChain';
 import { Store } from './Store';
+import FixedTD from './components/FixedTD';
+
+const Styles = styled.div`
+  padding: 1rem;
+  table {
+    border-spacing: 0;
+    border: 1px solid black;
+    tr {
+      :last-child {
+        td {
+          border-bottom: 0;
+        }
+      }
+    }
+    th,
+    td {
+      margin: 0;
+      padding: 0.5rem;
+      border-bottom: 1px solid black;
+      border-right: 1px solid black;
+      :last-child {
+        border-right: 0;
+      }
+    }
+  }
+`;
 
 const Row = styled.div`
   display: flex;
@@ -25,7 +51,7 @@ function Legs({ expirationDate, optionsData, legs }) {
 
   console.log(50, expirationDate + ':' + daysTillExpiration)
   
-  const getCallOption = ({ expDate, strike }) => optionsData.callExpDateMap[expDate + ':' + Math.ceil(((new Date(expDate) - Date.now()))/1000/60/60/24)][strike.toFixed(1).toString()][0]
+  const getOption = ({ expDate, strike, side }) => optionsData[`${side}ExpDateMap`][expDate + ':' + Math.ceil(((new Date(expDate) - Date.now()))/1000/60/60/24)][strike.toFixed(1).toString()][0]
   
   let deltaSum = 0;
   let gammaSum = 0;
@@ -33,7 +59,7 @@ function Legs({ expirationDate, optionsData, legs }) {
   let totalPrice = 0;
   
   legs.forEach((leg) => {
-    let callOption = getCallOption(leg);
+    let callOption = getOption(leg);
     deltaSum += leg.quantity * callOption.delta;
     gammaSum += leg.quantity * callOption.gamma;
     thetaSum += leg.quantity * callOption.theta;
@@ -41,49 +67,58 @@ function Legs({ expirationDate, optionsData, legs }) {
   })
 
   return (
-    <div style={{border: '1px solid black', margin: '1em', padding: '1em'}}>
+    <div style={{
+      border: '1px solid black',
+      margin: '1em',
+      padding: '1em',
+      position: 'sticky',
+      top: 0,
+    }}>
       <p>Legs:</p>
-      <table style={{width: '100%'}}>
-        <thead>
-          <tr>
-            <td style={{textAlign: 'center'}}>Quantity</td>
-            <td style={{textAlign: 'center'}}>Strike</td>
-            <td style={{textAlign: 'center'}}>Side</td>
-            <td style={{textAlign: 'center'}}>Exp Date</td>
-            <td style={{textAlign: 'center'}}>Mid</td>
-            <td style={{textAlign: 'center'}}>Delta</td>
-            <td style={{textAlign: 'center'}}>Gamma</td>
-            <td style={{textAlign: 'center'}}>Theta</td>
-          </tr>
-        </thead>
-        <tbody>
-          {legs.map(({quantity, strike, side, expDate}) => {
-            let callOption = getCallOption({expDate, strike});
-            return (
-              <tr key={strike + side + expDate}>
-                <td>{quantity}</td>
-                <td>{strike}</td>
-                <td>{side}</td>
-                <td>{expDate}</td>
-                <td>{((callOption.bid + callOption.ask) / 2).toFixed(2)}</td>
-                <td style={{textAlign: 'right'}}>{callOption.delta}</td>
-                <td style={{textAlign: 'right'}}>{callOption.gamma}</td>
-                <td style={{textAlign: 'right'}}>{callOption.theta}</td>
-              </tr>
-            );
-          })}
-          <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td>{totalPrice.toFixed(2)}</td>
-            <td style={{textAlign: 'right'}}>{deltaSum.toFixed(4)}</td>
-            <td style={{textAlign: 'right'}}>{gammaSum.toFixed(4)}</td>
-            <td style={{textAlign: 'right'}}>{thetaSum.toFixed(4)}</td>
-          </tr>
-        </tbody>
-      </table>
+      <Styles>
+        <table style={{width: '100%'}}>
+          <thead>
+            <tr>
+              <th style={{textAlign: 'center'}}>Quantity</th>
+              <th style={{textAlign: 'center'}}>Strike</th>
+              <th style={{textAlign: 'center'}}>Side</th>
+              <th style={{textAlign: 'center'}}>Exp Date</th>
+              <th style={{textAlign: 'center'}}>Mid</th>
+              <th style={{textAlign: 'center'}}>Delta</th>
+              <th style={{textAlign: 'center'}}>Gamma</th>
+              <th style={{textAlign: 'center'}}>Theta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {legs.map(({quantity, strike, side, expDate}) => {
+              let callOption = getOption({expDate, side, strike});
+              console.log(quantity, strike, side, expDate, callOption);
+              return (
+                <tr key={strike + side + expDate}>
+                  <td>{quantity}</td>
+                  <td>{strike}</td>
+                  <td>{side}</td>
+                  <td>{expDate}</td>
+                  <FixedTD style={{textAlign: 'right'}} value={((callOption.bid + callOption.ask) / 2)} />
+                  <FixedTD style={{textAlign: 'right'}} toFixed={3} value={callOption.delta} />
+                  <FixedTD style={{textAlign: 'right'}} toFixed={3} value={callOption.gamma} />
+                  <FixedTD style={{textAlign: 'right'}} toFixed={3} value={callOption.theta} />
+                </tr>
+              );
+            })}
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <FixedTD style={{textAlign: 'right'}} value={totalPrice} />
+              <FixedTD style={{textAlign: 'right'}} toFixed={3}>{deltaSum}</FixedTD>
+              <FixedTD style={{textAlign: 'right'}} toFixed={3}>{gammaSum}</FixedTD>
+              <FixedTD style={{textAlign: 'right'}} toFixed={3}>{thetaSum}</FixedTD>
+            </tr>
+          </tbody>
+        </table>
+      </Styles>
     </div>
   );
 };
@@ -92,6 +127,17 @@ function LegBuilder({ symbol, expirationDate }) {
   const { state } = useContext(Store);
   const [optionsData, setOptionsData] = useState({});
   const [error, setError] = useState(null);
+  const [legs, setLegs] = useState([{
+    quantity: 1,
+    strike: 454.0,
+    side: 'call',
+    expDate: expirationDate,
+  }, {
+    quantity: -1,
+    strike: 449.0,
+    side: 'call',
+    expDate: expirationDate,
+  }]);
   console.log(21, optionsData);
 
   useEffect(() => {
@@ -130,17 +176,41 @@ function LegBuilder({ symbol, expirationDate }) {
     }
   }, [state.user.access_token, expirationDate, symbol]);
 
-  const legs = [{
-    quantity: 1,
-    strike: 454.0,
-    side: 'call',
-    expDate: expirationDate,
-  }, {
-    quantity: -1,
-    strike: 449.0,
-    side: 'call',
-    expDate: expirationDate,
-  }];
+  const cellClicked = (cell) => {
+    if (cell.column.id === 'strikePrice') {
+
+    } else {
+      let side = cell.column.id.split('-')[0]
+      let field = cell.column.id.split('-')[1];
+      if (field !== 'bid' && field !== 'ask') {
+        return;
+      }
+
+      let option = cell.row.original[cell.column.id.split('-')[0]];
+      console.log(side, field, option.strikePrice, option.expirationDate, option);
+      let oldOption = legs.find((leg) => leg.side === side && leg.strike == option.strikePrice);
+      if (oldOption) {
+        if ((field === 'bid' && oldOption.quantity > 0 ) || (field === 'ask' && oldOption.quantity < 0 )) {
+          setLegs([...legs.filter((leg) => leg.side !== side || leg.strike != option.strikePrice)]);
+        } else {
+          setLegs([...legs.filter((leg) => leg.side !== side || leg.strike != option.strikePrice), {
+            quantity: field === 'bid' ? 1 : -1,
+            strike: option.strikePrice,
+            side,
+            expDate: expirationDate,
+          }])
+        }
+      } else {
+        console.log('addding leg')
+        setLegs([...legs, {
+          quantity: field === 'bid' ? 1 : -1,
+          strike: option.strikePrice,
+          side,
+          expDate: expirationDate,
+        }])
+      }
+    }
+  }
 
   return (
     <Col className="App">
@@ -151,7 +221,7 @@ function LegBuilder({ symbol, expirationDate }) {
       <Row className="row">
         <Col className="col">
           { optionsData.status === 'SUCCESS' &&
-            <OptionsChain expirationDate={expirationDate} optionsData={optionsData} />
+            <OptionsChain legs={legs} expirationDate={expirationDate} optionsData={optionsData} onCellClick={cellClicked}/>
           }
         </Col>
         <Col className="col">

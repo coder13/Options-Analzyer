@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import styled from 'styled-components'
 import { useTable } from 'react-table';
+import FixedTD from './components/FixedTD';
 
 const Styles = styled.div`
   padding: 1rem;
@@ -27,7 +28,35 @@ const Styles = styled.div`
   }
 `;
 
-function OptionsChain({ expirationDate, optionsData }) {
+const StrikeTD = styled.td`
+  text-align: center;
+  background-color: #dfdfdf;
+`;
+
+const OptionsDataTD = styled.td`
+  text-align: center;
+  background-color: ${props => props.quantity < 0 ? '#FF7F7F' : (props.quantity > 0 ? '#98fb98' : (props.inTheMoney ? '#FFFFBF' : 'white'))};
+`;
+
+const OptionsDataTR = styled.tr`
+  :hover {
+    filter: brightness(90%);
+  }
+`;
+
+function OptionsChain({
+  expirationDate,
+  optionsData,
+  fields = {
+    gamma: true,
+    delta: true,
+    theta: true,
+    bid: true,
+    ask: true,
+  },
+  legs,
+  onCellClick = () => {},
+}) {
   const daysTillExpiration = Math.ceil(((new Date(expirationDate) - Date.now()))/1000/60/60/24);
   const expDate = expirationDate + ':' + daysTillExpiration;
 
@@ -35,17 +64,23 @@ function OptionsChain({ expirationDate, optionsData }) {
     Header: 'Calls',
     columns: [{
       Header: 'Gamma',
-      accessor: 'gamma',
+      id: 'call-gamma',
+      accessor: ({ call }) => call.gamma,
+      Cell: ({ value }) => (+value).toFixed(3),
     }, {
       Header: 'Delta',
-      accessor: 'delta',
+      id: 'call-delta',
+      accessor: ({ call }) => call.delta,
+      Cell: ({ value }) => (+value).toFixed(3),
     }, {
       Header: 'Bid',
-      accessor: 'bid',
+      id: 'call-bid',
+      accessor: ({ call }) => call.bid,
     }, {
       Header: 'Ask',
-      accessor: 'ask',
-    }],
+      id: 'call-ask',
+      accessor: ({ call }) => call.ask,
+    }].filter(({ id }) => fields[id.split('-')[1]]),
   }, {
     Header: 'Strike',
     accessor: 'strikePrice',
@@ -53,34 +88,30 @@ function OptionsChain({ expirationDate, optionsData }) {
     Header: 'Puts',
     columns: [{
       Header: 'Bid',
-      accessor: (originalRow, rowIndex) => {
-        console.log(75, originalRow);
-        return optionsData.putExpDateMap[expDate][originalRow.strikePrice.toFixed(1).toString()][0].bid;
-      },
+      id: 'put-bid',
+      accessor: ({ put }) => put.bid,
     }, {
       Header: 'Ask',
-      accessor: (originalRow, rowIndex) => {
-        console.log(75, originalRow);
-        return optionsData.putExpDateMap[expDate][originalRow.strikePrice.toFixed(1).toString()][0].ask;
-      },
+      id: 'put-ask',
+      accessor: ({ put }) => put.ask,
     }, {
       Header: 'Delta',
-      accessor: (originalRow, rowIndex) => {
-        console.log(75, originalRow);
-        return optionsData.putExpDateMap[expDate][originalRow.strikePrice.toFixed(1).toString()][0].delta;
-      },
+      id: 'put-delta',
+      accessor: ({ put }) => put.delta,
+      Cell: ({ value }) => (+value).toFixed(3),
     }, {
       Header: 'Gamma',
-      accessor: (originalRow, rowIndex) => {
-        console.log(75, originalRow);
-        return optionsData.putExpDateMap[expDate][originalRow.strikePrice.toFixed(1).toString()][0].gamma;
-      },
-    }],
-  }], [expDate, optionsData]);
+      id: 'put-gamma',
+      accessor: ({ put }) => put.gamma,
+      Cell: ({ value }) => (+value).toFixed(3),
+    }].filter(({ id }) => fields[id.split('-')[1]]),
+  }], []);
 
   const data = useMemo(() =>
     Object.keys(optionsData.callExpDateMap[expDate]).map((key) => ({
-      ...optionsData.callExpDateMap[expDate][key][0]
+      strikePrice: optionsData.callExpDateMap[expDate][key][0].strikePrice,
+      call: optionsData.callExpDateMap[expDate][key][0],
+      put: optionsData.putExpDateMap[expDate][key][0],
     })).filter(({ strikePrice }) => Math.abs(strikePrice - optionsData.underlyingPrice) < 25)
   , [optionsData, expDate]);
 
@@ -94,6 +125,14 @@ function OptionsChain({ expirationDate, optionsData }) {
     columns,
     data,
   });
+
+  const highlight = { call: {}, put: {} };
+  for (let i in legs) {
+    let leg = legs[i];
+    highlight[leg.side][leg.strike] = leg.quantity;
+  }
+
+  console.log(130, highlight);
 
   return (
     <Styles>
@@ -111,11 +150,24 @@ function OptionsChain({ expirationDate, optionsData }) {
           {rows.map((row, i) => {
             prepareRow(row)
             return (
-              <tr {...row.getRowProps()}>
+              <OptionsDataTR {...row.getRowProps()}>
                 {row.cells.map(cell => {
-                  return <td {...cell.getCellProps()} style={{ textAlign: 'center' }}>{cell.render('Cell')}</td>
+                  if (cell.column.id === 'strikePrice') {
+                    return <StrikeTD {...cell.getCellProps()} onClick={() => onCellClick(cell)}>{cell.render('Cell')}</StrikeTD>
+                  }
+
+                  let side = cell.column.id.split('-')[0];
+                  let inTheMoney = cell.row.original[side].inTheMoney;
+                  return <OptionsDataTD
+                    {...cell.getCellProps()}
+                    inTheMoney={inTheMoney}
+                    quantity={highlight[side][cell.row.original.strikePrice]}
+                    onClick={() => onCellClick(cell)}
+                  >
+                    {cell.render('Cell')}
+                  </OptionsDataTD>
                 })}
-              </tr>
+              </OptionsDataTR>
             )
           })}
         </tbody>
