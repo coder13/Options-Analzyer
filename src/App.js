@@ -85,7 +85,7 @@ function App() {
             <Link to="/options_chains">Options Chain</Link>
           </Route>
           <Route path="/options_chains">
-            <LegBuilder symbol="SPY" expirationDate="2021-10-22" />
+            <LegBuilder symbol="SPY" expirationDate="2021-10-29" />
           </Route>
           <Route path="/auth/callback">
             <AuthCallback />

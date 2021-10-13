@@ -3,31 +3,31 @@ import styled from 'styled-components'
 import qs from 'qs';
 import OptionsChain from './OptionsChain';
 import { Store } from './Store';
-import FixedTD from './components/FixedTD';
+import { safeFixed, dollar } from './util';
 
 const Styles = styled.div`
-  padding: 1rem;
-  table {
-    border-spacing: 0;
-    border: 1px solid black;
-    tr {
-      :last-child {
-        td {
-          border-bottom: 0;
-        }
-      }
-    }
-    th,
-    td {
-      margin: 0;
-      padding: 0.5rem;
-      border-bottom: 1px solid black;
-      border-right: 1px solid black;
-      :last-child {
-        border-right: 0;
-      }
-    }
-  }
+  // padding: 1rem;
+  // table {
+  //   border-spacing: 0;
+  //   border: 1px solid black;
+  //   tr {
+  //     :last-child {
+  //       td {
+  //         border-bottom: 0;
+  //       }
+  //     }
+  //   }
+  //   th,
+  //   td {
+  //     margin: 0;
+  //     padding: 0.5rem;
+  //     border-bottom: 1px solid black;
+  //     border-right: 1px solid black;
+  //     :last-child {
+  //       border-right: 0;
+  //     }
+  //   }
+  // }
 `;
 
 const Row = styled.div`
@@ -42,16 +42,12 @@ const Col = styled.div`
   flex: 1;
 `;
 
-function Legs({ expirationDate, optionsData, legs }) {
-  const daysTillExpiration = Math.ceil(((new Date(expirationDate) - Date.now()))/1000/60/60/24);
-
+function Legs({ optionsData, legs }) {
   if (optionsData.status !== 'SUCCESS') {
     return <div />
   }
-
-  console.log(50, expirationDate + ':' + daysTillExpiration)
   
-  const getOption = ({ expDate, strike, side }) => optionsData[`${side}ExpDateMap`][expDate + ':' + Math.ceil(((new Date(expDate) - Date.now()))/1000/60/60/24)][strike.toFixed(1).toString()][0]
+  const getOption = ({ expDate, strike, side }) => optionsData[`${side}ExpDateMap`][expDate][safeFixed(1)(strike).toString()][0]
   
   let deltaSum = 0;
   let gammaSum = 0;
@@ -76,13 +72,14 @@ function Legs({ expirationDate, optionsData, legs }) {
     }}>
       <p>Legs:</p>
       <Styles>
-        <table style={{width: '100%'}}>
+        <table style={{ width: '100%' }} className="table-auto">
           <thead>
             <tr>
               <th style={{textAlign: 'center'}}>Quantity</th>
               <th style={{textAlign: 'center'}}>Strike</th>
               <th style={{textAlign: 'center'}}>Side</th>
               <th style={{textAlign: 'center'}}>Exp Date</th>
+              <th style={{textAlign: 'center'}}>Days</th>
               <th style={{textAlign: 'center'}}>Mid</th>
               <th style={{textAlign: 'center'}}>Delta</th>
               <th style={{textAlign: 'center'}}>Gamma</th>
@@ -90,19 +87,20 @@ function Legs({ expirationDate, optionsData, legs }) {
             </tr>
           </thead>
           <tbody>
-            {legs.map(({quantity, strike, side, expDate}) => {
-              let callOption = getOption({expDate, side, strike});
-              console.log(quantity, strike, side, expDate, callOption);
+            {legs.map(({ quantity, strike, side, expDate }) => {
+              let callOption = getOption({ expDate, side, strike });
+
               return (
                 <tr key={strike + side + expDate}>
                   <td>{quantity}</td>
                   <td>{strike}</td>
                   <td>{side}</td>
-                  <td>{expDate}</td>
-                  <FixedTD style={{textAlign: 'right'}} value={((callOption.bid + callOption.ask) / 2)} />
-                  <FixedTD style={{textAlign: 'right'}} toFixed={3} value={callOption.delta} />
-                  <FixedTD style={{textAlign: 'right'}} toFixed={3} value={callOption.gamma} />
-                  <FixedTD style={{textAlign: 'right'}} toFixed={3} value={callOption.theta} />
+                  <td>{expDate.split(':')[0]}</td>
+                  <td>{expDate.split(':')[1]}</td>
+                  <td style={{textAlign: 'right'}}>{dollar((callOption.bid + callOption.ask) / 2)}</td>
+                  <td style={{textAlign: 'right'}}>{safeFixed(3)(quantity * callOption.gamma)}</td>
+                  <td style={{textAlign: 'right'}}>{safeFixed(3)(quantity * callOption.delta)}</td>
+                  <td style={{textAlign: 'right'}}>{safeFixed(3)(quantity * callOption.theta)}</td>
                 </tr>
               );
             })}
@@ -111,10 +109,11 @@ function Legs({ expirationDate, optionsData, legs }) {
               <td></td>
               <td></td>
               <td></td>
-              <FixedTD style={{textAlign: 'right'}} value={totalPrice} />
-              <FixedTD style={{textAlign: 'right'}} toFixed={3}>{deltaSum}</FixedTD>
-              <FixedTD style={{textAlign: 'right'}} toFixed={3}>{gammaSum}</FixedTD>
-              <FixedTD style={{textAlign: 'right'}} toFixed={3}>{thetaSum}</FixedTD>
+              <td></td>
+              <td style={{textAlign: 'right'}}>{dollar(totalPrice)}</td>
+              <td style={{textAlign: 'right'}}>{safeFixed(3)(deltaSum)}</td>
+              <td style={{textAlign: 'right'}}>{safeFixed(3)(gammaSum)}</td>
+              <td style={{textAlign: 'right'}}>{safeFixed(3)(thetaSum)}</td>
             </tr>
           </tbody>
         </table>
@@ -127,17 +126,7 @@ function LegBuilder({ symbol, expirationDate }) {
   const { state } = useContext(Store);
   const [optionsData, setOptionsData] = useState({});
   const [error, setError] = useState(null);
-  const [legs, setLegs] = useState([{
-    quantity: 1,
-    strike: 454.0,
-    side: 'call',
-    expDate: expirationDate,
-  }, {
-    quantity: -1,
-    strike: 449.0,
-    side: 'call',
-    expDate: expirationDate,
-  }]);
+  const [legs, setLegs] = useState([]);
   console.log(21, optionsData);
 
   useEffect(() => {
@@ -148,7 +137,7 @@ function LegBuilder({ symbol, expirationDate }) {
         symbol: symbol,
         contractType: 'ALL',
         includeQuotes: 'FALSE',
-        fromDate: expirationDate,
+        fromDate: new Date().toISOString(),
         toDate: expirationDate,
       })}`, {
         headers: {
@@ -176,7 +165,7 @@ function LegBuilder({ symbol, expirationDate }) {
     }
   }, [state.user.access_token, expirationDate, symbol]);
 
-  const cellClicked = (cell) => {
+  const cellClicked = (cell, expDate) => {
     if (cell.column.id === 'strikePrice') {
 
     } else {
@@ -187,8 +176,7 @@ function LegBuilder({ symbol, expirationDate }) {
       }
 
       let option = cell.row.original[cell.column.id.split('-')[0]];
-      console.log(side, field, option.strikePrice, option.expirationDate, option);
-      let oldOption = legs.find((leg) => leg.side === side && leg.strike == option.strikePrice);
+      let oldOption = legs.find((leg) => leg.side === side && leg.strike == option.strikePrice && leg.expDate === expDate);
       if (oldOption) {
         if ((field === 'bid' && oldOption.quantity > 0 ) || (field === 'ask' && oldOption.quantity < 0 )) {
           setLegs([...legs.filter((leg) => leg.side !== side || leg.strike != option.strikePrice)]);
@@ -197,7 +185,7 @@ function LegBuilder({ symbol, expirationDate }) {
             quantity: field === 'bid' ? 1 : -1,
             strike: option.strikePrice,
             side,
-            expDate: expirationDate,
+            expDate: expDate,
           }])
         }
       } else {
@@ -206,11 +194,13 @@ function LegBuilder({ symbol, expirationDate }) {
           quantity: field === 'bid' ? 1 : -1,
           strike: option.strikePrice,
           side,
-          expDate: expirationDate,
+          expDate: expDate,
         }])
       }
     }
   }
+
+  console.log('legs', legs);
 
   return (
     <Col className="App">

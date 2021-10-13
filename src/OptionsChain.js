@@ -1,32 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import styled from 'styled-components'
 import { useTable } from 'react-table';
-import FixedTD from './components/FixedTD';
-
-const Styles = styled.div`
-  padding: 1rem;
-  table {
-    border-spacing: 0;
-    border: 1px solid black;
-    tr {
-      :last-child {
-        td {
-          border-bottom: 0;
-        }
-      }
-    }
-    th,
-    td {
-      margin: 0;
-      padding: 0.5rem;
-      border-bottom: 1px solid black;
-      border-right: 1px solid black;
-      :last-child {
-        border-right: 0;
-      }
-    }
-  }
-`;
+import { safeFixed, dollar } from './util';
+import ExpirationDatePicker from './components/ExpirationDatePicker';
 
 const StrikeTD = styled.td`
   text-align: center;
@@ -45,7 +21,6 @@ const OptionsDataTR = styled.tr`
 `;
 
 function OptionsChain({
-  expirationDate,
   optionsData,
   fields = {
     gamma: true,
@@ -57,8 +32,23 @@ function OptionsChain({
   legs,
   onCellClick = () => {},
 }) {
-  const daysTillExpiration = Math.ceil(((new Date(expirationDate) - Date.now()))/1000/60/60/24);
-  const expDate = expirationDate + ':' + daysTillExpiration;
+  const expirationDates = Object.keys(optionsData.callExpDateMap);
+  const [selectedExpirationDate, setSelectedExpirationDate] = useState(expirationDates[0])
+  const highlight = useMemo(() => {
+    let h = {};
+    console.log('rendering highlight');
+    for (let i in legs) {
+      const leg = legs[i];
+  
+      if (!h[leg.expDate]) {
+        h[leg.expDate] = { call: {}, put: {} };
+      }
+  
+      h[leg.expDate][leg.side][leg.strike] = leg.quantity;
+    }
+
+    return h;
+  }, [legs]);
 
   const columns = useMemo(() => [{
     Header: 'Calls',
@@ -66,20 +56,20 @@ function OptionsChain({
       Header: 'Gamma',
       id: 'call-gamma',
       accessor: ({ call }) => call.gamma,
-      Cell: ({ value }) => (+value).toFixed(3),
+      Cell: ({ value }) => dollar(value),
     }, {
       Header: 'Delta',
       id: 'call-delta',
       accessor: ({ call }) => call.delta,
-      Cell: ({ value }) => (+value).toFixed(3),
+      Cell: ({ value }) => dollar(value),
     }, {
       Header: 'Bid',
       id: 'call-bid',
-      accessor: ({ call }) => call.bid,
+      accessor: ({ call }) => dollar(call.bid),
     }, {
       Header: 'Ask',
       id: 'call-ask',
-      accessor: ({ call }) => call.ask,
+      accessor: ({ call }) => dollar(call.ask),
     }].filter(({ id }) => fields[id.split('-')[1]]),
   }, {
     Header: 'Strike',
@@ -98,22 +88,22 @@ function OptionsChain({
       Header: 'Delta',
       id: 'put-delta',
       accessor: ({ put }) => put.delta,
-      Cell: ({ value }) => (+value).toFixed(3),
+      Cell: ({ value }) => safeFixed(3)(value),
     }, {
       Header: 'Gamma',
       id: 'put-gamma',
       accessor: ({ put }) => put.gamma,
-      Cell: ({ value }) => (+value).toFixed(3),
+      Cell: ({ value }) => safeFixed(3)(value),
     }].filter(({ id }) => fields[id.split('-')[1]]),
   }], []);
 
   const data = useMemo(() =>
-    Object.keys(optionsData.callExpDateMap[expDate]).map((key) => ({
-      strikePrice: optionsData.callExpDateMap[expDate][key][0].strikePrice,
-      call: optionsData.callExpDateMap[expDate][key][0],
-      put: optionsData.putExpDateMap[expDate][key][0],
+    Object.keys(optionsData.callExpDateMap[selectedExpirationDate]).map((key) => ({
+      strikePrice: optionsData.callExpDateMap[selectedExpirationDate][key][0].strikePrice,
+      call: optionsData.callExpDateMap[selectedExpirationDate][key][0],
+      put: optionsData.putExpDateMap[selectedExpirationDate][key][0],
     })).filter(({ strikePrice }) => Math.abs(strikePrice - optionsData.underlyingPrice) < 25)
-  , [optionsData, expDate]);
+  , [optionsData, selectedExpirationDate]);
 
   const {
     getTableProps,
@@ -126,18 +116,15 @@ function OptionsChain({
     data,
   });
 
-  const highlight = { call: {}, put: {} };
-  for (let i in legs) {
-    let leg = legs[i];
-    highlight[leg.side][leg.strike] = leg.quantity;
-  }
-
-  console.log(130, highlight);
-
   return (
-    <Styles>
-      <table {...getTableProps()}>
-        <thead>
+    <div className="p-1">
+      <ExpirationDatePicker
+        dates={expirationDates}
+        selectedDate={selectedExpirationDate}
+        onDateSelected={(date) => setSelectedExpirationDate(date)}
+      />
+      <table {...getTableProps()} className="table-auto border border-collapse">
+        <thead className="border">
           {headerGroups.map(headerGroup => (
             <tr {...headerGroup.getHeaderGroupProps()}>
               {headerGroup.headers.map(column => (
@@ -153,16 +140,18 @@ function OptionsChain({
               <OptionsDataTR {...row.getRowProps()}>
                 {row.cells.map(cell => {
                   if (cell.column.id === 'strikePrice') {
-                    return <StrikeTD {...cell.getCellProps()} onClick={() => onCellClick(cell)}>{cell.render('Cell')}</StrikeTD>
+                    return <StrikeTD {...cell.getCellProps()} className="border p-1" onClick={() => onCellClick(cell, selectedExpirationDate)}>{cell.render('Cell')}</StrikeTD>
                   }
 
-                  let side = cell.column.id.split('-')[0];
-                  let inTheMoney = cell.row.original[side].inTheMoney;
+                  const side = cell.column.id.split('-')[0];
+                  const inTheMoney = cell.row.original[side].inTheMoney;
+
                   return <OptionsDataTD
                     {...cell.getCellProps()}
+                    className="border p-1"
                     inTheMoney={inTheMoney}
-                    quantity={highlight[side][cell.row.original.strikePrice]}
-                    onClick={() => onCellClick(cell)}
+                    quantity={highlight[selectedExpirationDate] && highlight[selectedExpirationDate][side] && highlight[selectedExpirationDate][side][cell.row.original.strikePrice]}
+                    onClick={() => onCellClick(cell, selectedExpirationDate)}
                   >
                     {cell.render('Cell')}
                   </OptionsDataTD>
@@ -172,7 +161,7 @@ function OptionsChain({
           })}
         </tbody>
       </table>
-    </Styles>
+    </div>
   );
 }
 

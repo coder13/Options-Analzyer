@@ -1,0 +1,17 @@
+import clsx from 'clsx';
+
+function ExpirationDatePicker({ dates, selectedDate, onDateSelected = () => {}}) {
+  return (
+    <div className="flex flex-wrap border-collapse">
+      {dates.map((expirationDate) => (
+        <div className={clsx('border p-1 text-center flex-auto', {
+          'bg-yellow-100': expirationDate === selectedDate,
+        })} key={expirationDate} onClick={() => onDateSelected(expirationDate)}>
+          {expirationDate}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default ExpirationDatePicker;
