@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components'
 import qs from 'qs';
 import OptionsChain from './OptionsChain';
-import { Store } from './Store';
+import { AuthContext } from './AuthProvider';
 import { safeFixed, dollar } from './util';
 
 const Styles = styled.div`
@@ -123,7 +123,7 @@ function Legs({ optionsData, legs }) {
 };
 
 function LegBuilder({ symbol, expirationDate }) {
-  const { state } = useContext(Store);
+  const { user } = useContext(AuthContext);
   const [optionsData, setOptionsData] = useState({});
   const [error, setError] = useState(null);
   const [legs, setLegs] = useState([]);
@@ -141,7 +141,7 @@ function LegBuilder({ symbol, expirationDate }) {
         toDate: expirationDate,
       })}`, {
         headers: {
-          Authorization: `Bearer ${state.user.access_token}`,
+          Authorization: `Bearer ${user.accessToken}`,
         },
       });
       let json = await data.json();
@@ -152,7 +152,7 @@ function LegBuilder({ symbol, expirationDate }) {
       setOptionsData(json);
     }
 
-    if (state.user.access_token) {
+    if (user.accessToken) {
       fetchData();
       interval = setInterval(() => {
         console.log('fetching')
@@ -163,7 +163,7 @@ function LegBuilder({ symbol, expirationDate }) {
     return () => {
       clearInterval(interval);
     }
-  }, [state.user.access_token, expirationDate, symbol]);
+  }, [user.accessToken, expirationDate, symbol]);
 
   const cellClicked = (cell, expDate) => {
     if (cell.column.id === 'strikePrice') {
