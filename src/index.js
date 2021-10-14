@@ -2,8 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
-import { StoreProvider } from './Store';
-import { AuthProvider } from './AuthProvider';
+import { StoreProvider } from './store';
+import { AuthProvider } from './providers/AuthProvider';
 import reportWebVitals from './reportWebVitals';
 
 ReactDOM.render(

@@ -5,9 +5,10 @@ import {
   Route,
   Link,
 } from 'react-router-dom';
-import LegBuilder from './LegBuilder';
-import { AuthContext } from './AuthProvider';
-import AuthCallback from './components/AuthCallback';
+import { AuthContext } from './providers/AuthProvider';
+import AuthCallback from './pages/AuthCallback';
+import LegBuilder from './pages/LegBuilder';
+import HomePage from './pages/Home';
 import './App.css'
 
 function App() {
@@ -15,21 +16,21 @@ function App() {
 
   return (
     <Router>
-      <div className="App overflow-hidden h-screen">
-        <nav className="flex p-2 bg-green-100 shadow-lg">
-          <h1>Options Analyzer</h1>
+      <div className="app overflow-hidden h-screen">
+        <nav className="flex p-0 bg-green-100 shadow-lg">
+          <h1 className="m-2">Options Analyzer</h1>
+          <Link to="/" className="link">Home</Link>
+          <Link to="/options" className="link">Options</Link>
           <div className="flex-1" />
           {!auth.user || !auth.accessToken
-            ? <button onClick={() => login()}>Login</button>
-            : <span>{auth.user.userId}</span>
+            ? <button className="m-2" onClick={() => login()}>Login</button>
+            : <Link className="link">{auth.user.userId}</Link>
           }
         </nav>
         <div className="flex flex-auto overflow-y-auto min-h-0">
           <Switch>
-            <Route exact path="/">
-              <Link to="/options_chains">Options Chain</Link>
-            </Route>
-            <Route path="/options_chains">
+            <Route exact path="/" component={HomePage} />
+            <Route path="/options">
               <LegBuilder symbol="SPY" expirationDate="2021-10-29" />
             </Route>
             <Route path="/auth/callback">

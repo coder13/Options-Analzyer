@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { fetchToken, updateToken, login } from './api';
+import { fetchToken, updateToken, login } from '../api';
 import { createContext, useEffect, useReducer } from 'react';
 
 const reducer = (state, action) => {

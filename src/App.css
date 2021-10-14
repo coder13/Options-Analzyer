@@ -1,5 +1,12 @@
-.App {
+.app {
   display: flex;
   flex: 1;
   flex-direction: column;
+}
+
+.link {
+  @apply bg-green-200;
+  @apply hover:filter;
+  @apply hover:brightness-90;
+  @apply p-2;
 }

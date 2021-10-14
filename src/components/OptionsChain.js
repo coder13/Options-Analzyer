@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTable } from 'react-table';
-import { safeFixed, dollar } from './util';
-import ExpirationDatePicker from './components/ExpirationDatePicker';
+import { safeFixed, dollar } from '../util';
+import ExpirationDatePicker from './ExpirationDatePicker';
 import clsx from 'clsx';
 
 function OptionsChain({

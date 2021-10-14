@@ -4,7 +4,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import qs from 'qs';
-import { AuthContext } from '../AuthProvider';
+import { AuthContext } from '../providers/AuthProvider';
 
 function AuthCallback() {
   const { auth, getToken } = useContext(AuthContext);
