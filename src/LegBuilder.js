@@ -176,12 +176,12 @@ function LegBuilder({ symbol, expirationDate }) {
       }
 
       let option = cell.row.original[cell.column.id.split('-')[0]];
-      let oldOption = legs.find((leg) => leg.side === side && leg.strike == option.strikePrice && leg.expDate === expDate);
+      let oldOption = legs.find((leg) => leg.side === side && leg.strike === option.strikePrice && leg.expDate === expDate);
       if (oldOption) {
         if ((field === 'bid' && oldOption.quantity > 0 ) || (field === 'ask' && oldOption.quantity < 0 )) {
-          setLegs([...legs.filter((leg) => leg.side !== side || leg.strike != option.strikePrice)]);
+          setLegs([...legs.filter((leg) => leg.side !== side || leg.strike !== option.strikePrice)]);
         } else {
-          setLegs([...legs.filter((leg) => leg.side !== side || leg.strike != option.strikePrice), {
+          setLegs([...legs.filter((leg) => leg.side !== side || leg.strike !== option.strikePrice), {
             quantity: field === 'bid' ? 1 : -1,
             strike: option.strikePrice,
             side,
