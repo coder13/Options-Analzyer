@@ -1,24 +1,8 @@
 import { useMemo, useState } from 'react';
-import styled from 'styled-components'
 import { useTable } from 'react-table';
 import { safeFixed, dollar } from './util';
 import ExpirationDatePicker from './components/ExpirationDatePicker';
-
-const StrikeTD = styled.td`
-  text-align: center;
-  background-color: #dfdfdf;
-`;
-
-const OptionsDataTD = styled.td`
-  text-align: center;
-  background-color: ${props => props.quantity < 0 ? '#FF7F7F' : (props.quantity > 0 ? '#98fb98' : (props.inTheMoney ? '#FFFFBF' : 'white'))};
-`;
-
-const OptionsDataTR = styled.tr`
-  :hover {
-    filter: brightness(90%);
-  }
-`;
+import clsx from 'clsx';
 
 function OptionsChain({
   optionsData,
@@ -74,16 +58,19 @@ function OptionsChain({
   }, {
     Header: 'Strike',
     accessor: 'strikePrice',
+    Cell: ({ value }) => dollar(value),
   }, {
     Header: 'Puts',
     columns: [{
       Header: 'Bid',
       id: 'put-bid',
       accessor: ({ put }) => put.bid,
+      Cell: ({ value }) => dollar(value),
     }, {
       Header: 'Ask',
       id: 'put-ask',
       accessor: ({ put }) => put.ask,
+      Cell: ({ value }) => dollar(value),
     }, {
       Header: 'Delta',
       id: 'put-delta',
@@ -102,7 +89,7 @@ function OptionsChain({
       strikePrice: optionsData.callExpDateMap[selectedExpirationDate][key][0].strikePrice,
       call: optionsData.callExpDateMap[selectedExpirationDate][key][0],
       put: optionsData.putExpDateMap[selectedExpirationDate][key][0],
-    })).filter(({ strikePrice }) => Math.abs(strikePrice - optionsData.underlyingPrice) < 25)
+    })).filter(({ strikePrice }) => Math.abs((strikePrice - optionsData.underlyingPrice) / optionsData.underlyingPrice) < .10)
   , [optionsData, selectedExpirationDate]);
 
   const {
@@ -137,26 +124,29 @@ function OptionsChain({
           {rows.map((row, i) => {
             prepareRow(row)
             return (
-              <OptionsDataTR {...row.getRowProps()}>
+              <tr {...row.getRowProps()} className="bg-white hover:brightness-90 hover:filter">
                 {row.cells.map(cell => {
                   if (cell.column.id === 'strikePrice') {
-                    return <StrikeTD {...cell.getCellProps()} className="border p-1" onClick={() => onCellClick(cell, selectedExpirationDate)}>{cell.render('Cell')}</StrikeTD>
+                    return <td {...cell.getCellProps()} className="p-1 px-2 bg-gray-200 align-center" onClick={() => onCellClick(cell, selectedExpirationDate)}>{cell.render('Cell')}</td>
                   }
 
                   const side = cell.column.id.split('-')[0];
                   const inTheMoney = cell.row.original[side].inTheMoney;
+                  const quantity = highlight[selectedExpirationDate] && highlight[selectedExpirationDate][side] ? highlight[selectedExpirationDate][side][cell.row.original.strikePrice] : 0;
 
-                  return <OptionsDataTD
+                  return <td
                     {...cell.getCellProps()}
-                    className="border p-1"
-                    inTheMoney={inTheMoney}
-                    quantity={highlight[selectedExpirationDate] && highlight[selectedExpirationDate][side] && highlight[selectedExpirationDate][side][cell.row.original.strikePrice]}
+                    className={clsx('border-collapse p-1 px-2 text-center cursor-pointer', {
+                      'bg-yellow-100': inTheMoney,
+                      'bg-green-300': quantity > 0,
+                      'bg-red-300': quantity < 0,
+                    })}
                     onClick={() => onCellClick(cell, selectedExpirationDate)}
                   >
                     {cell.render('Cell')}
-                  </OptionsDataTD>
+                  </td>
                 })}
-              </OptionsDataTR>
+              </tr>
             )
           })}
         </tbody>

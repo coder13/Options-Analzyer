@@ -110,6 +110,7 @@ function LegBuilder({ symbol, expirationDate }) {
   const [error, setError] = useState(null);
   const [legs, setLegs] = useState([]);
   const [ticker, setTicker] = useState(symbol);
+  const [tickerInput, setTickerInput] = useState(symbol);
   console.log(21, optionsData);
 
   useEffect(() => {
@@ -185,34 +186,40 @@ function LegBuilder({ symbol, expirationDate }) {
 
   console.log('legs', legs);
 
+  const updateTicker = (event) => {
+    event.preventDefault();
+    setTicker(tickerInput);
+  };
+
   return (
-    <div className="col">
-      <div className="row">
+    <div className="col flex-1">
+      <div className="flex flex-direction-row flex-initial">
         {error && error}
       </div>
-      <div className="row">
-        <div className="col w-8 m-2">
-          <form className="flex flex-direction-row items-center" action={fetch}>
-            <label className="mr-4" for="ticker">Ticker: </label>
+      <div className="row flex-initial h-16">
+        <div className="col w-1/4 m-2 items-center justify-center">
+          <form className="flex flex-direction-row items-center" onSubmit={updateTicker}>
+            <label className="mr-4" htmlFor="ticker">Ticker: </label>
             <input
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               id="ticker"
-              value={ticker}
-              />
+              value={tickerInput}
+              onChange={(e) => setTickerInput(e.currentTarget.value)}
+            />
           </form>
         </div>
-        <div className="col justify-center m2">
+        <div className="col flex-1 justify-center m2">
           <p>Underlying Price: ${optionsData.underlyingPrice && optionsData.underlyingPrice.toFixed(2)}</p>
         </div>
       </div>
       <hr/>
-      <div className="row">
-        <div className="col p-2">
+      <div className="row flex-1">
+        <div className="col flex-1 p-2">
           { optionsData.status === 'SUCCESS' &&
             <OptionsChain legs={legs} expirationDate={expirationDate} optionsData={optionsData} onCellClick={cellClicked}/>
           }
         </div>
-        <div className="col p-2">
+        <div className="col flex-1 p-2">
           <Legs optionsData={optionsData} legs={legs} expirationDate={expirationDate} />
         </div>
       </div>

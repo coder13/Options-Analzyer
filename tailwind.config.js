@@ -6,7 +6,9 @@ module.exports = {
   },
   variants: {
     extend: {
-      tableLayout: ['hover', 'focus']
+      tableLayout: ['hover', 'focus'],
+      filter: ['hover'],
+      brightness: ['hover'],
     },
   },
   plugins: [],

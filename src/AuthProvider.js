@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const expiresIn = (state.expiresAt - 5*1000*60) - Date.now();
+    const expiresIn = Math.max(0, (state.expiresAt - 1*1000*60) - Date.now());
     console.log('Refreshing token in', expiresIn, 'milliseconds or', expiresIn / 1000 / 60, 'minutes');
 
     const interval = setTimeout(() => {
@@ -110,6 +110,9 @@ export const AuthProvider = ({ children }) => {
         }
         
         return res.json();
+      })
+      .catch((err) => {
+        console.error(err);
       }),
     [state.accessToken],
   );
