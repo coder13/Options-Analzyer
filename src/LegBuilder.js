@@ -30,18 +30,6 @@ const Styles = styled.div`
   // }
 `;
 
-const Row = styled.div`
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-`;
-
-const Col = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-`;
-
 function Legs({ optionsData, legs }) {
   if (optionsData.status !== 'SUCCESS') {
     return <div />
@@ -63,13 +51,7 @@ function Legs({ optionsData, legs }) {
   })
 
   return (
-    <div style={{
-      border: '1px solid black',
-      margin: '1em',
-      padding: '1em',
-      position: 'sticky',
-      top: 0,
-    }}>
+    <div className="rounded border p-1 sticky top-0">
       <p>Legs:</p>
       <Styles>
         <table style={{ width: '100%' }} className="table-auto">
@@ -123,10 +105,11 @@ function Legs({ optionsData, legs }) {
 };
 
 function LegBuilder({ symbol, expirationDate }) {
-  const { user } = useContext(AuthContext);
+  const { auth } = useContext(AuthContext);
   const [optionsData, setOptionsData] = useState({});
   const [error, setError] = useState(null);
   const [legs, setLegs] = useState([]);
+  const [ticker, setTicker] = useState(symbol);
   console.log(21, optionsData);
 
   useEffect(() => {
@@ -134,14 +117,14 @@ function LegBuilder({ symbol, expirationDate }) {
     async function fetchData() {
       let data = await fetch(`${process.env.REACT_APP_TDA_ORIGIN}/v1/marketdata/chains?${qs.stringify({
         apikey: process.env.REACT_APP_CLIENT_ID,
-        symbol: symbol,
+        symbol: ticker,
         contractType: 'ALL',
         includeQuotes: 'FALSE',
         fromDate: new Date().toISOString(),
         toDate: expirationDate,
       })}`, {
         headers: {
-          Authorization: `Bearer ${user.accessToken}`,
+          Authorization: `Bearer ${auth.accessToken}`,
         },
       });
       let json = await data.json();
@@ -152,7 +135,7 @@ function LegBuilder({ symbol, expirationDate }) {
       setOptionsData(json);
     }
 
-    if (user.accessToken) {
+    if (auth.accessToken) {
       fetchData();
       interval = setInterval(() => {
         console.log('fetching')
@@ -163,7 +146,7 @@ function LegBuilder({ symbol, expirationDate }) {
     return () => {
       clearInterval(interval);
     }
-  }, [user.accessToken, expirationDate, symbol]);
+  }, [auth.accessToken, expirationDate, ticker]);
 
   const cellClicked = (cell, expDate) => {
     if (cell.column.id === 'strikePrice') {
@@ -203,22 +186,37 @@ function LegBuilder({ symbol, expirationDate }) {
   console.log('legs', legs);
 
   return (
-    <Col className="App">
-      <Row className="row">
+    <div className="col">
+      <div className="row">
         {error && error}
-        <p>Underlying Price: ${optionsData.underlyingPrice && optionsData.underlyingPrice.toFixed(2)}</p>
-      </Row>
-      <Row className="row">
-        <Col className="col">
+      </div>
+      <div className="row">
+        <div className="col w-8 m-2">
+          <form className="flex flex-direction-row items-center" action={fetch}>
+            <label className="mr-4" for="ticker">Ticker: </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id="ticker"
+              value={ticker}
+              />
+          </form>
+        </div>
+        <div className="col justify-center m2">
+          <p>Underlying Price: ${optionsData.underlyingPrice && optionsData.underlyingPrice.toFixed(2)}</p>
+        </div>
+      </div>
+      <hr/>
+      <div className="row">
+        <div className="col p-2">
           { optionsData.status === 'SUCCESS' &&
             <OptionsChain legs={legs} expirationDate={expirationDate} optionsData={optionsData} onCellClick={cellClicked}/>
           }
-        </Col>
-        <Col className="col">
+        </div>
+        <div className="col p-2">
           <Legs optionsData={optionsData} legs={legs} expirationDate={expirationDate} />
-        </Col>
-      </Row>
-    </Col>
+        </div>
+      </div>
+    </div>
   );
 }
 

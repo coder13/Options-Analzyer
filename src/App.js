@@ -6,33 +6,37 @@ import {
   Link,
 } from 'react-router-dom';
 import LegBuilder from './LegBuilder';
-import { Store } from './Store';
 import { AuthContext } from './AuthProvider';
 import AuthCallback from './components/AuthCallback';
+import './App.css'
 
 function App() {
-  const { state } = useContext(Store);
-  const { login } = useContext(AuthContext);
-  console.log(34, state);
+  const { auth, login } = useContext(AuthContext);
 
   return (
     <Router>
-      <div className="App">
-        <header>
-          {<button onClick={() => login()}>Login</button> }
-        </header>
-        <Switch>
-          <Route exact path="/">
-            <p>hi</p>
-            <Link to="/options_chains">Options Chain</Link>
-          </Route>
-          <Route path="/options_chains">
-            <LegBuilder symbol="SPY" expirationDate="2021-10-29" />
-          </Route>
-          <Route path="/auth/callback">
-            <AuthCallback />
-          </Route>
-        </Switch>
+      <div className="App overflow-hidden h-screen">
+        <nav className="flex p-2 bg-green-100 shadow-lg">
+          <h1>Options Analyzer</h1>
+          <div className="flex-1" />
+          {!auth.user || !auth.accessToken
+            ? <button onClick={() => login()}>Login</button>
+            : <span>{auth.user.userId}</span>
+          }
+        </nav>
+        <div className="flex flex-auto overflow-y-auto min-h-0">
+          <Switch>
+            <Route exact path="/">
+              <Link to="/options_chains">Options Chain</Link>
+            </Route>
+            <Route path="/options_chains">
+              <LegBuilder symbol="SPY" expirationDate="2021-10-29" />
+            </Route>
+            <Route path="/auth/callback">
+              <AuthCallback />
+            </Route>
+          </Switch>
+        </div>
       </div>
     </Router>
   );

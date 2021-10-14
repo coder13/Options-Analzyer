@@ -11,6 +11,11 @@ const reducer = (state, action) => {
         refreshToken: action.refreshToken,
         expiresAt: action.expiresAt,
       };
+    case 'SET_USER':
+      return {
+        ...state,
+        user: action.user,
+      };
     default:
       return state;
   }
@@ -20,6 +25,7 @@ const initialState = {
   accessToken: null,
   refreshToken: null,
   expiresAt: null,
+  user: null,
 };
 
 export const AuthContext = createContext(initialState);
@@ -91,6 +97,35 @@ export const AuthProvider = ({ children }) => {
     }
   }, [state.expiresAt, state.refreshToken]);
 
+  const fetchUser = useCallback(
+    () =>
+      fetch(`${process.env.REACT_APP_TDA_ORIGIN}/v1/userprincipals`, {
+        headers: {
+          Authorization: `Bearer ${state.accessToken}`,
+        },
+      })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(res.statusText);
+        }
+        
+        return res.json();
+      }),
+    [state.accessToken],
+  );
+
+  useEffect(() => {
+    if (state.accessToken) {
+      fetchUser()
+        .then((data) => {
+          dispatch({
+            type: 'SET_USER',
+            user: data,
+          });
+        });
+    }
+  }, [state.accessToken, fetchUser]);
+
   const getToken = useCallback(
     (code) =>
       fetchToken(code).then((jsonRes) => {
@@ -109,5 +144,5 @@ export const AuthProvider = ({ children }) => {
     [],
   );
 
-  return <AuthContext.Provider value={{ user: state, login, getToken }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ auth: state, login, getToken }}>{children}</AuthContext.Provider>;
 };

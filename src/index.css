@@ -2,3 +2,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}

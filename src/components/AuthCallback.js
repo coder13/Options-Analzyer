@@ -7,7 +7,7 @@ import qs from 'qs';
 import { AuthContext } from '../AuthProvider';
 
 function AuthCallback() {
-  const { user, getToken } = useContext(AuthContext);
+  const { auth, getToken } = useContext(AuthContext);
   const [error, setError] = useState(null);
   const location = useLocation();
   const params = qs.parse(location.search, { ignoreQueryPrefix: true });
@@ -29,7 +29,7 @@ function AuthCallback() {
           <p>Code: {params.code}</p>
         </div>
       )}
-      {user.accessToken && <Redirect to="/" />}
+      {auth.accessToken && <Redirect to="/" />}
     </div>
   )
 }
